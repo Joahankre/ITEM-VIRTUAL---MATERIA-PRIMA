@@ -1,0 +1,66 @@
+Sub DuplicarLinhasComMP_SubNivel()
+
+    Dim ws As Worksheet
+    Dim ultimaColuna As Long
+    Dim ultimaLinha As Long
+    Dim colMateriaPrima As Long
+    Dim colItem As Long
+    Dim i As Long
+    Dim valorItemOriginal As String
+    
+    Set ws = ActiveSheet
+    
+    ' Encontrar colunas "MATERIA PRIMA" e "Item"
+    ultimaColuna = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    
+    For i = 1 To ultimaColuna
+        
+        If InStr(1, UCase(ws.Cells(1, i).Value), "MATERIA PRIMA") > 0 Then
+            colMateriaPrima = i
+        End If
+        
+        If Trim(UCase(ws.Cells(1, i).Value)) = "ITEM" Then
+            colItem = i
+        End If
+        
+    Next i
+    
+    If colMateriaPrima = 0 Or colItem = 0 Then
+        MsgBox "Coluna 'MATERIA PRIMA' ou 'Item' não encontrada.", vbExclamation
+        Exit Sub
+    End If
+    
+    ultimaLinha = ws.Cells(ws.Rows.Count, colMateriaPrima).End(xlUp).Row
+    
+    Application.ScreenUpdating = False
+    
+    ' Loop de baixo para cima
+    For i = ultimaLinha To 2 Step -1
+        
+        If InStr(1, UCase(ws.Cells(i, colMateriaPrima).Value), "MP") > 0 Then
+            
+            valorItemOriginal = ws.Cells(i, colItem).Value
+            
+            ' Inserir nova linha abaixo
+            ws.Rows(i + 1).Insert Shift:=xlDown
+            
+            ' Copiar linha inteira
+            ws.Rows(i).Copy
+            ws.Rows(i + 1).PasteSpecial xlPasteAll
+            
+            ' Criar subnível (Item + ".1")
+            ws.Cells(i + 1, colItem).Value = valorItemOriginal & ".1"
+            
+            ' Garantir que permanece MP
+            ws.Cells(i + 1, colMateriaPrima).Value = "MP"
+            
+        End If
+        
+    Next i
+    
+    Application.CutCopyMode = False
+    Application.ScreenUpdating = True
+    
+    MsgBox "Linhas duplicadas com subnível criado!", vbInformation
+
+End Sub
