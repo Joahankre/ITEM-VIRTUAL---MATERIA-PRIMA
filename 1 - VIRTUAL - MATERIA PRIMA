@@ -1,0 +1,92 @@
+Sub Main()
+
+    ' Verifica se é uma montagem
+    If ThisApplication.ActiveDocument.DocumentType <> DocumentTypeEnum.kAssemblyDocumentObject Then
+        MessageBox.Show("Execute em uma montagem.")
+        Exit Sub
+    End If
+
+    Dim oAsm As AssemblyDocument = ThisApplication.ActiveDocument
+
+    ' Processa todas as ocorrências da montagem principal
+    ProcessOccurrences(oAsm.ComponentDefinition.Occurrences)
+
+    ' Atualiza a montagem
+    oAsm.Update()
+    MessageBox.Show("Itens virtuais criados com sucesso no BOM!")
+
+End Sub
+
+' Processa todas as ocorrências, recursivamente
+Sub ProcessOccurrences(oOccs As ComponentOccurrences)
+
+    Dim lista As New List(Of ComponentOccurrence)
+
+    ' Copia ocorrências para lista para evitar problemas de coleção dinâmica
+    For Each oOcc As ComponentOccurrence In oOccs
+        lista.Add(oOcc)
+    Next
+
+    For Each oOcc As ComponentOccurrence In lista
+
+        ' Ignora peças suprimidas ou virtuais
+        If oOcc.Suppressed Then Continue For
+        If TypeOf oOcc.Definition Is VirtualComponentDefinition Then Continue For
+
+        ' Ignora peças do Content Center
+        Dim isCC As Boolean = False
+        If TypeOf oOcc.Definition Is PartComponentDefinition Then
+            isCC = oOcc.Definition.IsContentMember
+        End If
+        If isCC Then Continue For
+
+        ' Verifica se a peça contém "MATÉRIA PRIMA" no nome ou na descrição
+        Dim desc As String = ""
+        Try
+            desc = oOcc.Definition.Document.PropertySets.Item("Design Tracking Properties").Item("Description").Value
+        Catch
+        End Try
+
+        If desc.ToUpper().Contains("MATÉRIA PRIMA") Or oOcc.Name.ToUpper().Contains("MATÉRIA PRIMA") Then
+            AdicionarItemVirtual(oOcc)
+        End If
+
+        ' Se for submontagem, processa recursivamente
+        If TypeOf oOcc.Definition Is AssemblyComponentDefinition Then
+            ProcessOccurrences(oOcc.SubOccurrences)
+        End If
+
+    Next
+
+End Sub
+
+' Cria um item virtual no BOM logo abaixo da ocorrência original
+Sub AdicionarItemVirtual(oOcc As ComponentOccurrence)
+
+    ' Cria matriz identidade para inserir o virtual
+    Dim trans As Matrix = ThisApplication.TransientGeometry.CreateMatrix()
+    trans.SetToIdentity()
+
+    ' Adiciona a peça virtual na mesma montagem
+    Dim virtOcc As ComponentOccurrence
+    virtOcc = oOcc.Parent.Occurrences.AddVirtual(oOcc.Name & "_MP", trans)
+
+    ' Define como filho da peça original no BOM (aparece logo abaixo)
+    virtOcc.BOMParent = oOcc
+
+    ' Não define BOMStructure em virtual para evitar erro
+    ' virtOcc.BOMStructure = BOMStructureEnum.kNormalBOMStructure  ' opcional, pode causar erro
+
+    ' Copiar descrição da peça original
+    Try
+        Dim desc As String = ""
+        Try
+            desc = oOcc.Definition.Document.PropertySets.Item("Design Tracking Properties").Item("Description").Value
+        Catch
+        End Try
+
+        virtOcc.Definition.PropertySets.Item("Design Tracking Properties").Item("Description").Value = desc & " - VIRTUAL"
+    Catch
+    End Try
+
+End Sub
