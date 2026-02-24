@@ -1,0 +1,49 @@
+Sub Main
+Dim oAssemblyDocument As AssemblyDocument
+oAssemblyDocument = ThisDoc.Document
+
+Dim oAssemblyComponentDefinition As AssemblyComponentDefinition
+oAssemblyComponentDefinition = oAssemblyDocument.ComponentDefinition
+
+Dim oBOM As BOM
+oBOM = oAssemblyComponentDefinition.BOM
+oBOM.StructuredViewEnabled = True
+Dim oBOMView As BOMView
+oBOMView = oBOM.BOMViews(2) 'Structured view
+oBOM.StructuredViewFirstLevelOnly = False
+
+Call RecursiveCheckAndSetProps(oBOMView.BOMRows,0)
+
+End Sub
+
+Sub RecursiveCheckAndSetProps(ByVal oRowsElements As BOMRowsEnumerator, indent As Integer)
+	On Error Resume Next
+        For Each oBOMRow As BOMRow In oRowsElements
+            Dim oComponentDefinition As ComponentDefinition
+            oComponentDefinition = oBOMRow.ComponentDefinitions.Item(1)
+
+            Dim oBOMItemNumber As String
+            oBOMItemNumber = oBOMRow.ItemNumber() 'this is item number in the BOM
+			
+				Dim rDoc As Document = oComponentDefinition.Document
+				Call Check_Prop(rDoc,oBOMItemNumber)
+
+            If Not oBOMRow.ChildRows Is Nothing Then
+				Call RecursiveCheckAndSetProps(oBOMRow.ChildRows,indent+1)
+            End If
+        Next
+End Sub
+
+Sub Check_Prop(rDoc As Document,oBOMItemNumber As String)
+
+    Dim oComponentDefinitionPropertySet As PropertySet
+    oComponentDefinitionPropertySet = rDoc.PropertySets.Item("Inventor User Defined Properties")
+    'custom property tab
+	Try
+        'if already exists then set it 
+        oComponentDefinitionPropertySet.Item("BOM Number").Value = oBOMItemNumber
+    Catch ex As Exception
+        'else add it
+        oComponentDefinitionPropertySet.Add(oBOMItemNumber, "BOM Number")
+    End Try
+End Sub
