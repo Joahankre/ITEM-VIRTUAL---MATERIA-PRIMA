@@ -1,0 +1,26 @@
+Dim uom As UnitsOfMeasure
+uom = ThisDoc.Document.UnitsOfMeasure
+
+oSpaces = "         "
+
+Dim oSSet As SelectSet = ThisDoc.Document.SelectSet
+
+If oSSet.Count = 0 Then
+	MessageBox.Show("Select at least one dimension", "iLogic", _
+	MessageBoxButtons.OK,MessageBoxIcon.Information)
+	Exit Sub
+Else
+
+	For Each obj As Object In oSSet
+		'filter dimensions, ignore other selected entities
+		If TypeOf obj Is GeneralDimension Then
+			Dim oDim As GeneralDimension = obj	
+			oValue = uom.GetStringFromValue(oDim.ModelValue, kDefaultDisplayLengthUnits)
+			oMessage = oMessage & vbLf & oSpaces & oValue
+			oSumTotal = oSumTotal + oDim.ModelValue 		
+		End If
+	Next
+End If
+
+oSumTotal = uom.GetStringFromValue(oSumTotal, kDefaultDisplayLengthUnits)
+MessageBox.Show(oMessage & vbLf &  "+  _____________ " & vbLf &  oSpaces & oSumTotal, "iLogic")
