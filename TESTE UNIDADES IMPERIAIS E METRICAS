@@ -1,0 +1,45 @@
+' ==========================================
+' TESTE DE MODEL VALUE - PARAMETRO G_L
+' ==========================================
+
+Dim doc As PartDocument = ThisDoc.Document
+Dim compDef As PartComponentDefinition = doc.ComponentDefinition
+
+Dim param As UserParameter = Nothing
+
+For Each p As UserParameter In compDef.Parameters.UserParameters
+    If UCase(Trim(p.Name)) = "G_L" Then
+        param = p
+        Exit For
+    End If
+Next
+
+If param Is Nothing Then
+    MessageBox.Show("Parâmetro G_L não encontrado.")
+    Return
+End If
+
+Dim uom As UnitsOfMeasure = doc.UnitsOfMeasure
+
+Dim modelValueRaw As Double = param.ModelValue
+Dim valueRaw As Double = param.Value
+
+' Conversões oficiais pelo Inventor
+Dim emMM As Double = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kMillimeterLengthUnits)
+Dim emCM As Double = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kCentimeterLengthUnits)
+Dim emM As Double = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kMeterLengthUnits)
+Dim emIN As Double = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kInchLengthUnits)
+
+Dim msg As String =
+"===== TESTE MODEL VALUE =====" & vbCrLf & vbCrLf &
+"Template Length Units: " & doc.UnitsOfMeasure.LengthUnits & vbCrLf &
+"Parameter Units: " & param.Units & vbCrLf &
+"Expression: " & param.Expression & vbCrLf &
+"Value: " & valueRaw & vbCrLf &
+"ModelValue (RAW): " & modelValueRaw & vbCrLf & vbCrLf &
+"Convertido para mm: " & emMM & vbCrLf &
+"Convertido para cm: " & emCM & vbCrLf &
+"Convertido para metros: " & emM & vbCrLf &
+"Convertido para polegadas: " & emIN
+
+MessageBox.Show(msg)
