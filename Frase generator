@@ -1,0 +1,62 @@
+Imports System.Linq
+Dim compDef As ComponentDefinition = doc.ComponentDefinition
+Dim leafOccs As ComponentOccurrencesEnumerator = compDef.Occurrences.AllLeafOccurrences
+Dim frameMembers As List(Of ComponentOccurrence) = (
+    From occ As ComponentOccurrence In leafOccs 
+    Where occ.Definition.AttributeSets.NameIsUsed("com.autodesk.FG") AndAlso
+    occ.Name <> "Frame Reference Model"
+    ).ToList
+		
+
+	
+for each oCompOcc As ComponentOccurrence In frameMembers
+	iProperties.Value(oCompOcc.Name, "Custom", "Remarks") = 0
+	Try
+
+	    For Each prop As Inventor.Property In oCompOcc.Definition.Document.PropertySets.Item("Inventor User Defined Properties")
+			If prop.DisplayName = "CUTDETAIL1"
+				Dim ContainString As String = prop.Value 
+				Try
+					If Not ContainString.Contains("Mitre")
+						CuttingMitreString2 = Mid(prop.Value,6,6)
+						If CuttingMitreString2 > 45
+							MitreSum = (90.00 - CuttingMitreString2)
+						Else
+							MitreSum = CuttingMitreString2
+						End If
+						CutDetail1 = MitreSum
+					End If 
+				Catch
+					CutDetail1 = Mid(prop.Value, 6, 4)
+				End Try
+				iProperties.Value(oCompOcc.Name, "Custom", "Remarks") = ("M1 @ " & CutDetail1 & "°")
+			End If 
+			
+			If prop.DisplayName = "CUTDETAIL2"
+				Dim ContainString As String = prop.Value 
+				Try
+					If Not ContainString.Contains("Mitre")
+						CuttingMitreString2 = Mid(prop.Value,6,6)
+						If CuttingMitreString2 > 45
+							MitreSum = (90.00 - CuttingMitreString2)
+						Else
+							MitreSum = CuttingMitreString2
+						End If
+						CutDetail2 = MitreSum			
+					End If 
+				Catch
+					CutDetail2 = Mid(prop.Value, 6,4)
+				End Try
+			Try
+				If CutDetail1 Like CutDetail2
+					iProperties.Value(oCompOcc.Name,"Custom", "Remarks") = ("M2 @ " & CutDetail1 & "°")
+				Else
+					iProperties.Value(oCompOcc.Name, "Custom", "Remarks") = ("M1 @ " & CutDetail1 & "°" & " : " & "M1 @ " & CutDetail2 & "°")	
+				End If 
+			Catch
+			End Try
+			End If 
+		Next	
+	Catch
+	End Try
+Next
