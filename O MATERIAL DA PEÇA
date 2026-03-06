@@ -1,0 +1,18 @@
+Sub LerMaterialAtual()
+
+    Dim oPartDoc As PartDocument
+    Set oPartDoc = ThisApplication.ActiveDocument
+    
+    ' Verificar se é uma peça
+    If oPartDoc.DocumentType <> kPartDocumentObject Then
+        MsgBox "Este documento não é uma peça."
+        Exit Sub
+    End If
+    
+    ' Ler o material via iProperty "Material"
+    Dim matName As String
+    matName = oPartDoc.PropertySets.Item("Design Tracking Properties").Item("Material").Value
+    
+    MsgBox "Material atual da peça: " & matName
+
+End Sub
