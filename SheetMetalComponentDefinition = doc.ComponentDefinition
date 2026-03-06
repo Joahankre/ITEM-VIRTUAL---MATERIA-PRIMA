@@ -1,0 +1,75 @@
+Sub Main()
+
+    Dim doc As PartDocument = ThisDoc.Document
+    Dim smDef As SheetMetalComponentDefinition = doc.ComponentDefinition
+    Dim uom As UnitsOfMeasure = doc.UnitsOfMeasure
+
+    Dim thicknessMM As Double = uom.ConvertUnits( _
+        smDef.Thickness.Value, _
+        UnitsTypeEnum.kCentimeterLengthUnits, _
+        UnitsTypeEnum.kMillimeterLengthUnits)
+
+    MessageBox.Show("Espessura da chapa: " & thicknessMM)
+
+End Sub
+
+Sub TestarModelValueThickness()
+
+    Dim param = ObterParametro("Thickness")
+
+    If param Is Nothing Then
+        MessageBox.Show("Parâmetro Thickness não encontrado.")
+        Return
+    End If
+
+    Dim resultado = ConverterUnidades(param)
+
+    MessageBox.Show(resultado)
+
+End Sub
+
+
+Private Function ObterParametro(nome As String) As UserParameter
+
+    Dim doc As PartDocument = ThisDoc.Document
+    Dim compDef As PartComponentDefinition = doc.ComponentDefinition
+
+    For Each p As UserParameter In compDef.Parameters.UserParameters
+
+        If String.Equals(p.Name, nome, StringComparison.OrdinalIgnoreCase) Then
+            Return p
+        End If
+
+    Next
+
+    Return Nothing
+
+End Function
+
+
+Private Function ConverterUnidades(param As UserParameter) As String
+
+    Dim doc As PartDocument = ThisDoc.Document
+    Dim uom As UnitsOfMeasure = doc.UnitsOfMeasure
+
+    Dim modelValueRaw As Double = param.ModelValue
+    Dim valueRaw As Double = param.Value
+
+    Dim mm = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kMillimeterLengthUnits)
+    Dim cm = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kCentimeterLengthUnits)
+    Dim m = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kMeterLengthUnits)
+    Dim inch = uom.ConvertUnits(modelValueRaw, param.Units, UnitsTypeEnum.kInchLengthUnits)
+
+    Return _
+"===== TESTE MODEL VALUE =====" & vbCrLf & vbCrLf & _
+"Template Length Units: " & doc.UnitsOfMeasure.LengthUnits & vbCrLf & _
+"Parameter Units: " & param.Units & vbCrLf & _
+"Expression: " & param.Expression & vbCrLf & _
+"Value: " & valueRaw & vbCrLf & _
+"ModelValue (RAW): " & modelValueRaw & vbCrLf & vbCrLf & _
+"Convertido para mm: " & mm & vbCrLf & _
+"Convertido para cm: " & cm & vbCrLf & _
+"Convertido para metros: " & m & vbCrLf & _
+"Convertido para polegadas: " & inch
+
+End Function
