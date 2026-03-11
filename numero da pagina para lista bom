@@ -1,0 +1,147 @@
+Sub Main()
+
+    ' Verifica se o documento atual é um desenho
+    Dim oDoc As DrawingDocument = TryCast(ThisDoc.Document, DrawingDocument)
+    If oDoc Is Nothing Then
+        MessageBox.Show("Este script deve ser executado dentro de um documento de desenho (IDW).")
+        Exit Sub
+    End If
+
+    ' =========================
+    ' LER KEYWORDS DO IDW (Summary)
+    ' =========================
+    Dim palavraChave As String = ""
+    Try
+        palavraChave = iProperties.Value("Summary", "Keywords")
+    Catch
+        palavraChave = ""
+    End Try
+
+    If Trim(palavraChave) = "" Then
+        MessageBox.Show("O iProperty 'Keywords' do desenho está vazio. Preencha antes de executar o script.")
+        Exit Sub
+    End If
+
+    ' =========================
+    ' IDENTIFICAR MODELOS NAS FOLHAS
+    ' =========================
+    Dim oSheets As Sheets = oDoc.Sheets
+    Dim modelPages As New Dictionary(Of String, List(Of Integer))
+
+    For sheetIndex As Integer = 1 To oSheets.Count
+        Dim oSheet As Sheet = oSheets.Item(sheetIndex)
+
+        For Each oView As DrawingView In oSheet.DrawingViews
+            If Not oView.ReferencedDocumentDescriptor Is Nothing AndAlso _
+               Not oView.ReferencedDocumentDescriptor.ReferencedDocument Is Nothing Then
+
+                Dim oModelDoc As Document = oView.ReferencedDocumentDescriptor.ReferencedDocument
+                Dim modelPath As String = oModelDoc.FullFileName
+
+                If Not modelPages.ContainsKey(modelPath) Then
+                    modelPages(modelPath) = New List(Of Integer)
+                End If
+
+                If Not modelPages(modelPath).Contains(sheetIndex) Then
+                    modelPages(modelPath).Add(sheetIndex)
+                End If
+
+            End If
+        Next
+    Next
+
+    ' =========================
+    ' CRIAR PROGRESS BAR
+    ' =========================
+    Dim oProgressBar As Inventor.ProgressBar
+    Dim oProgressSteps As Integer = modelPages.Count
+    Dim oProgressStep As Integer = 0
+
+    oProgressBar = ThisApplication.CreateProgressBar(False, oProgressSteps, "Atualizando propriedades")
+    oProgressBar.Message = "Iniciando..."
+    oProgressBar.UpdateProgress()
+
+    ' =========================
+    ' ATUALIZAR PROPRIEDADES DOS MODELOS
+    ' =========================
+    For Each kvp As KeyValuePair(Of String, List(Of Integer)) In modelPages
+
+        Dim modelPath As String = kvp.Key
+        Dim paginas As List(Of Integer) = kvp.Value
+
+        Dim textoPaginas As String = AgruparPaginas(paginas)
+
+        ' Adiciona traço entre Keywords e números, sem duplicar
+        Dim valorFinal As String
+        If Right(palavraChave, 1) = "-" Then
+            valorFinal = palavraChave & textoPaginas
+        Else
+            valorFinal = palavraChave & "-" & textoPaginas
+        End If
+
+        Try
+            Dim oModelDoc As Document = ThisApplication.Documents.Open(modelPath, False)
+            Dim oPropSet As PropertySet = oModelDoc.PropertySets.Item("Inventor User Defined Properties")
+
+            Try
+                oPropSet.Item("CodigoDesenho").Value = valorFinal
+            Catch
+                oPropSet.Add(valorFinal, "CodigoDesenho")
+            End Try
+
+            oModelDoc.Save()
+            oModelDoc.Close()
+
+        Catch ex As Exception
+            MessageBox.Show("Erro ao atualizar propriedades para: " & modelPath & vbCrLf & ex.Message)
+        End Try
+
+        oProgressStep += 1
+        oProgressBar.Message = "Processando " & oProgressStep & " de " & oProgressSteps
+        oProgressBar.UpdateProgress()
+
+    Next
+
+    oProgressBar.Close()
+    MessageBox.Show("Propriedade 'CodigoDesenho' atualizada com sucesso.")
+
+End Sub
+
+
+' =========================
+' FUNÇÃO PARA AGRUPAR PÁGINAS
+' =========================
+Function AgruparPaginas(paginas As List(Of Integer)) As String
+
+    If paginas Is Nothing OrElse paginas.Count = 0 Then Return ""
+
+    paginas.Sort()
+    Dim resultado As New List(Of String)
+
+    Dim inicio As Integer = paginas(0)
+    Dim fim As Integer = paginas(0)
+
+    For i As Integer = 1 To paginas.Count - 1
+        If paginas(i) = fim + 1 Then
+            fim = paginas(i)
+        Else
+            If inicio = fim Then
+                resultado.Add(CStr(inicio))
+            Else
+                resultado.Add(inicio & "-" & fim)
+            End If
+            inicio = paginas(i)
+            fim = paginas(i)
+        End If
+    Next
+
+    ' Adiciona o último intervalo
+    If inicio = fim Then
+        resultado.Add(CStr(inicio))
+    Else
+        resultado.Add(inicio & "-" & fim)
+    End If
+
+    Return String.Join(",", resultado)
+
+End Function
