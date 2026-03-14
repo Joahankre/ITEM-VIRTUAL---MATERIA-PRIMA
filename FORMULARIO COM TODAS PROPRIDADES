@@ -1,0 +1,56 @@
+Sub Main()
+    Dim oDoc As Document
+    oDoc = ThisApplication.ActiveDocument
+
+    Dim propriedadesParaProcurar As String() = {"COMPRIMENTO", "G_L"}
+    Dim resultado As String = "Propriedades do documento:" & vbCrLf & vbCrLf
+
+    ' Percorre todas as PropertySets
+    For Each propSet As [PropertySet] In oDoc.PropertySets
+        resultado &= "===== PropertySet: " & propSet.DisplayName & " =====" & vbCrLf
+
+        ' Percorre todas as propriedades
+        For Each prop As [Property] In propSet
+            Dim propName As String = prop.Name
+            Dim propValue As String = ""
+
+            Try
+                ' Converte para string sem gerar erro
+                If prop.Value IsNot Nothing Then
+                    propValue = prop.Value.ToString()
+                Else
+                    propValue = "N/A"
+                End If
+            Catch
+                propValue = "N/A"
+            End Try
+
+            resultado &= "Propriedade: " & propName & " = " & propValue & vbCrLf
+
+            ' Marca se é a propriedade que estamos procurando
+            For Each busca As String In propriedadesParaProcurar
+                If propName.Trim().ToUpper() = busca.ToUpper() Then
+                    resultado &= ">>> ENCONTRADA! " & busca & " = " & propValue & vbCrLf
+                End If
+            Next
+        Next
+        resultado &= vbCrLf
+    Next
+
+    ' Cria um formulário simples com TextBox para copiar
+    Dim frm As New System.Windows.Forms.Form
+    frm.Text = "Propriedades do Documento - Copiável"
+    frm.Width = 800
+    frm.Height = 600
+
+    Dim txt As New System.Windows.Forms.TextBox
+    txt.Multiline = True
+    txt.ScrollBars = System.Windows.Forms.ScrollBars.Both
+    txt.WordWrap = False
+    txt.Dock = System.Windows.Forms.DockStyle.Fill
+    'txt.Font = New System.Drawing.Font("Consolas", 10)
+    txt.Text = resultado
+
+    frm.Controls.Add(txt)
+    frm.ShowDialog()
+End Sub
